@@ -56,9 +56,11 @@ class Menu():
             self.selection = None
 
         # remove menu-options
-        print(Cursor.UP(len(self.options) - self.__cursor_pos), end="")
-        for i in range(0, len(self.options) - 1):
-            print(f"{Cursor.DOWN()}\033[2K\033[G", end="")
+        with open("test.log", "w") as f:
+            f.write(str(self.__cursor_pos))
+        print(Cursor.DOWN(self.__cursor_pos), end="")
+        for i in range(0, len(self.options) - 2):
+            print(f"\033[2K\033[G{Cursor.UP()}", end="")
         self.__clear_line()
 
         # print took option
@@ -138,7 +140,7 @@ def main():
     init()
 
     print(LOGO, end = " ")
-    print(GRAY + "everything " + Fore.BLACK + Back.YELLOW + "v" + VERSION + Fore.RESET + Back.RESET, end="\n\n")
+    print(GRAY + "everything " + Style.RESET_ALL + Fore.BLACK + Back.YELLOW + "v" + VERSION + Fore.RESET + Back.RESET, end="\n\n")
 
     menu = Menu("[?] Take your action", 
         [
