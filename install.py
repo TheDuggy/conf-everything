@@ -1,19 +1,26 @@
 from sshkeyboard import listen_keyboard
-from colorama import Cursor, Fore
+from colorama import Cursor, Fore, Style
 from colorama import Back
 from colorama.initialise import init
 from enum import Enum
-from functools import partial
 import os
 
 ### Constants ###
 INFO = "./info"
 DATA = "./data"
-LOGO = Fore.BLACK + """   ___
- _| """ + Fore.YELLOW + "_" + Fore.BLACK + """ |_
-|  """ + Fore.YELLOW + "/ \\" + Fore.BLACK + """  |
-|_""" + Fore.YELLOW + " \\_/" + Fore.BLACK + """ _|
-  |___| """
+GRAY = Style.BRIGHT + Fore.BLACK
+""""""
+LOGO = GRAY + """                        ___
+                  ___  |   |  ___
+""" + Fore.YELLOW + """  ,ad0000ba, """ + GRAY + """    |   |_|   |_|   |""" + Fore.YELLOW + """   000b      00  00000000000
+ d0"'    `"0b""" + GRAY + """    |_     """ + Fore.YELLOW + "____" + GRAY +"""    _|""" + Fore.YELLOW + """   0000b     00  00\"\"\"\"\"\"\"\"\"  
+d0'             """ + GRAY + """___|   """ + Fore.YELLOW +"/    \\" + GRAY + """  |___""" + Fore.YELLOW + """  00 `0b    00  00
+00             """ + GRAY + """|      """ + Fore.YELLOW + "|      |" + GRAY +"""     |""" + Fore.YELLOW + """ 00  `0b   00  00aaaaa
+00             """ + GRAY + """|___   """ + Fore.YELLOW + "|      |" + GRAY + """  ___|""" + Fore.YELLOW + """ 00   `0b  00  00\"\"\"\"\"
+Y0,               """ + GRAY + """_|   """ + Fore.YELLOW + "\____/" + GRAY + """  |_""" + Fore.YELLOW + """    00    `0b 00  00 
+ Y0a.    .a0P    """ + GRAY + """|    _     _    |""" + Fore.YELLOW + """   00     `0000  00
+  `"Y0000Y"'     """ + GRAY + """|___| |   | |___|""" + Fore.YELLOW + """   00      `000  00
+                       """ + GRAY + """|___|        """ + Fore.RESET + Style.RESET_ALL
 VERSION = "1.0"
 
 
@@ -131,7 +138,7 @@ def main():
     init()
 
     print(LOGO, end = " ")
-    print(Fore.YELLOW + "conf-everything " + Fore.BLACK + Back.YELLOW + "v" + VERSION + Fore.RESET + Back.RESET, end="\n\n")
+    print(GRAY + "everything " + Fore.BLACK + Back.YELLOW + "v" + VERSION + Fore.RESET + Back.RESET, end="\n\n")
 
     menu = Menu("[?] Take your action", 
         [
