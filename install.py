@@ -3,6 +3,7 @@ from colorama import Cursor, Fore, Style
 from colorama import Back
 from colorama.initialise import init
 from enum import Enum
+from types import FunctionType
 import os
 
 ### Constants ###
@@ -30,21 +31,25 @@ class PlatformSupport(Enum):
     BOTH = 3
 
 class Menu():
-    def __init__(self, prompt: str, options: list) -> None:
-        self.options = options
+    def __init__(self, prompt: str, options: dict, hover_format: FunctionType, option_prefix: str = Fore.RESET, prompt_prefix: str = Fore.RESET, selected_prefix: str = Fore.RESET) -> None:
+        self.options = list(options.keys())
+        self.option_prefix = option_prefix
+        self.selected_prefix = selected_prefix
         self.selection = self.options[0]
         self.__cursor_pos = len(self.options) - 1
         self.__first_pressed = False
         self.prompt = prompt
+        self.prompt_prefix = prompt_prefix
+        self.hover_format = hover_format
 
         # hide cursor
         print("\033[?25l", end="")
 
-        print(f"{prompt}: ", end="\n\n")
+        print(f"{prompt_prefix + prompt}: ", end="\n\n")
 
         # print available options
         for s in options:
-            print(f"    {s}")
+            print(f"    {self.option_prefix + s}")
             self.__cursor_pos -= 1 
         print(Cursor.UP(), end="")
         self.__cursor_pos += 1
@@ -56,18 +61,18 @@ class Menu():
             self.selection = None
 
         # remove menu-options
-        with open("test.log", "w") as f:
-            f.write(str(self.__cursor_pos))
         print(Cursor.DOWN(self.__cursor_pos), end="")
         for i in range(0, len(self.options) - 2):
             print(f"\033[2K\033[G{Cursor.UP()}", end="")
         self.__clear_line()
 
         # print took option
-        print(f"{Cursor.UP(3)}{Cursor.FORWARD(len(self.prompt))}: {self.selection}")
+        print(f"{Cursor.UP(3) + Cursor.FORWARD(len(self.prompt) + 2) + self.selected_prefix + self.selection}")
 
         # show cursor
         print("\033[?25h", end="")
+        print(Fore.RESET + Style.RESET_ALL + Back.RESET, end="")
+        options[self.selection]()
         
     def __clear_line(self) -> None:
         print("\033[2K\033[G", end="")
@@ -76,19 +81,16 @@ class Menu():
         if key in ["up", "down", "tab"]:
             self.__hover(key)
 
-    def __on_select(self, option) -> str:
-        return Fore.YELLOW + f"{' ' * 4}  > {option}" + Fore.RESET
-
     def __hover(self, action: str) -> None:
 
         move = -1 if action == "down" or action == "tab" else 1
 
-
+        # check the hover-effect hasn't been applied yet
         if self.__first_pressed:
 
             # remove hover-effect from previous selection
             self.__clear_line()
-            print(Fore.RESET + f"{' ' * 4}{self.selection}", end="\r")
+            print(Fore.RESET + f"{' ' * 4}{self.option_prefix + self.selection}", end="\r")
 
             self.selection = self.options[((self.options.index(self.selection) + move) + len(self.options)) % len(self.options)]
 
@@ -107,13 +109,14 @@ class Menu():
                     self.__cursor_pos += 1
             
         else:
+            # for the first click we hover over the first item
             print(Cursor.UP(len(self.options) - 1), end="")
             self.__cursor_pos = len(self.options) - 1
             self.__first_pressed = True
 
         # print the hover-effect
         self.__clear_line()
-        print(self.__on_select(self.selection), end="\r")
+        print(self.hover_format(self.selection), end="\r")
         
 
 class Configuration():
@@ -137,17 +140,18 @@ class Configuration():
             raise Exception("Data entry missing!")
 
 def main():
+    print(type(main))
     init()
 
     print(LOGO, end = " ")
     print(GRAY + "everything " + Style.RESET_ALL + Fore.BLACK + Back.YELLOW + "v" + VERSION + Fore.RESET + Back.RESET, end="\n\n")
 
-    menu = Menu("[?] Take your action", 
-        [
-        "Test1",
-        "Test2",
-        "Test3"
-        ])
+    menu = Menu(prompt="[?] Take your action", options=
+        {
+            "List configs": lambda: print("Hello"),
+            "Create empty config":  lambda: print("Hello"),
+            "Update local configs": lambda: print("Hello")
+        }, hover_format=lambda option: Fore.CYAN + f"{' ' * 4}  > {option}" + Fore.RESET, option_prefix=Fore.YELLOW, prompt_prefix=Fore.YELLOW, selected_prefix=Fore.CYAN)
     
     print(menu.selection)
 
