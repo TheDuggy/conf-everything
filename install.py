@@ -23,14 +23,17 @@ class PlatformSupport(Enum):
     BOTH = 3
 
 class Menu():
-    def __init__(self, options: list) -> None:
+    def __init__(self, prompt: str, options: list) -> None:
         self.options = options
         self.selection = self.options[0]
         self.__cursor_pos = len(self.options) - 1
         self.__first_pressed = False
+        self.prompt = prompt
 
         # hide cursor
         print("\033[?25l", end="")
+
+        print(f"{prompt}: ", end="\n\n")
 
         # print available options
         for s in options:
@@ -38,14 +41,21 @@ class Menu():
             self.__cursor_pos -= 1 
         print(Cursor.UP(), end="")
         self.__cursor_pos += 1
-        self.options.reverse
+        self.options.reverse()
         # start keyboard-listener
-        listen_keyboard(on_press=self.__on_press, until="enter", delay_other_chars=0.01, delay_second_char=0.01) 
+        try:
+            listen_keyboard(on_press=self.__on_press, until="enter", delay_other_chars=0.01, delay_second_char=0.01) 
+        except KeyboardInterrupt:
+            self.selection = None
 
-        # remove hover-effect after enter is pressed
+        # remove menu-options
+        print(Cursor.UP(len(self.options) - self.__cursor_pos), end="")
+        for i in range(0, len(self.options) - 1):
+            print(f"{Cursor.DOWN()}\033[2K\033[G", end="")
         self.__clear_line()
-        print(f"{' ' * 4}{self.selection}")
-        print(Cursor.DOWN(len(options) - 1))
+
+        # print took option
+        print(f"{Cursor.UP(3)}{Cursor.FORWARD(len(self.prompt))}: {self.selection}")
 
         # show cursor
         print("\033[?25h", end="")
@@ -54,15 +64,16 @@ class Menu():
         print("\033[2K\033[G", end="")
 
     def __on_press(self, key) -> None:
-        if key == "up":
-            self.__hover(1)
-        elif key == "down":
-            self.__hover(-1)
+        if key in ["up", "down", "tab"]:
+            self.__hover(key)
 
     def __on_select(self, option) -> str:
         return Fore.YELLOW + f"{' ' * 4}  > {option}" + Fore.RESET
 
-    def __hover(self, move: int) -> None:
+    def __hover(self, action: str) -> None:
+
+        move = -1 if action == "down" or action == "tab" else 1
+
 
         if self.__first_pressed:
 
@@ -122,7 +133,8 @@ def main():
     print(LOGO, end = " ")
     print(Fore.YELLOW + "conf-everything " + Fore.BLACK + Back.YELLOW + "v" + VERSION + Fore.RESET + Back.RESET, end="\n\n")
 
-    menu = Menu([
+    menu = Menu("[?] Take your action", 
+        [
         "Test1",
         "Test2",
         "Test3"
