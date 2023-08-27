@@ -38,7 +38,7 @@ class Menu():
             self.__cursor_pos -= 1 
         print(Cursor.UP(), end="")
         self.__cursor_pos += 1
-        self.options.reverse()
+        self.options.reverse
         # start keyboard-listener
         listen_keyboard(on_press=self.__on_press, until="enter", delay_other_chars=0.01, delay_second_char=0.01) 
 
