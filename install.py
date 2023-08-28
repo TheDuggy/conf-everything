@@ -12,29 +12,29 @@ INFO = "./info"
 DATA = "./data"
 GRAY = Style.BRIGHT + Fore.BLACK
 """"""
-LOGO = GRAY + """                        ___
+LOGO = GRAY + Style.RESET_ALL + """                        ___
                   ___  |   |  ___
-""" + Fore.YELLOW + """  ,ad0000ba, """ + GRAY + """    |   |_|   |_|   |""" + Fore.YELLOW + """   000b      00  00000000000
- d0"'    `"0b""" + GRAY + """    |_     """ + Fore.YELLOW + "____" + GRAY +"""    _|""" + Fore.YELLOW + """   0000b     00  00\"\"\"\"\"\"\"\"\"  
-d0'             """ + GRAY + """___|   """ + Fore.YELLOW +"/    \\" + GRAY + """  |___""" + Fore.YELLOW + """  00 `0b    00  00
-00             """ + GRAY + """|      """ + Fore.YELLOW + "|      |" + GRAY +"""     |""" + Fore.YELLOW + """ 00  `0b   00  00aaaaa
-00             """ + GRAY + """|___   """ + Fore.YELLOW + "|      |" + GRAY + """  ___|""" + Fore.YELLOW + """ 00   `0b  00  00\"\"\"\"\"
-Y0,               """ + GRAY + """_|   """ + Fore.YELLOW + "\____/" + GRAY + """  |_""" + Fore.YELLOW + """    00    `0b 00  00 
- Y0a.    .a0P    """ + GRAY + """|    _     _    |""" + Fore.YELLOW + """   00     `0000  00
-  `"Y0000Y"'     """ + GRAY + """|___| |   | |___|""" + Fore.YELLOW + """   00      `000  00
-                       """ + GRAY + """|___|        """ + Fore.RESET + Style.RESET_ALL
+""" + Fore.YELLOW + """  ,ad0000ba, """ + GRAY + Style.RESET_ALL + Style.RESET_ALL + """    |   |_|   |_|   |""" + Fore.YELLOW + """   000b      00  00000000000
+ d0"'    `"0b""" + GRAY + Style.RESET_ALL + """    |_     """ + Fore.YELLOW + "____" + GRAY + Style.RESET_ALL +"""    _|""" + Fore.YELLOW + """   0000b     00  00\"\"\"\"\"\"\"\"\"  
+d0'             """ + GRAY + Style.RESET_ALL + """___|   """ + Fore.YELLOW +"/    \\" + GRAY + Style.RESET_ALL + """  |___""" + Fore.YELLOW + """  00 `0b    00  00
+00             """ + GRAY + Style.RESET_ALL + """|      """ + Fore.YELLOW + "|      |" + GRAY + Style.RESET_ALL +"""     |""" + Fore.YELLOW + """ 00  `0b   00  00aaaaa
+00             """ + GRAY + Style.RESET_ALL + """|___   """ + Fore.YELLOW + "|      |" + GRAY + Style.RESET_ALL + """  ___|""" + Fore.YELLOW + """ 00   `0b  00  00\"\"\"\"\"
+Y0,               """ + GRAY + Style.RESET_ALL + """_|   """ + Fore.YELLOW + "\____/" + GRAY + Style.RESET_ALL + """  |_""" + Fore.YELLOW + """    00    `0b 00  00 
+ Y0a.    .a0P    """ + GRAY + Style.RESET_ALL + """|    _     _    |""" + Fore.YELLOW + """   00     `0000  00
+  `"Y0000Y"'     """ + GRAY + Style.RESET_ALL + """|___| |   | |___|""" + Fore.YELLOW + """   00      `000  00
+                       """ + GRAY + Style.RESET_ALL + """|___|        """ + Fore.RESET + Style.RESET_ALL
 VERSION = "1.0"
 chached_configs = []
 
 class Logging():
-    def fatal(msg: str) -> None:
-        print(f"{Fore.RED}[-] {msg + Fore.RESET}")
+    def fatal(self, msg: str) -> None:
+        print(f"{Back.RESET + Style.RESET_ALL + Fore.RED}[-] {msg + Fore.RESET}")
 
-    def info(msg: str) -> None:
-        print(f"{Fore.CYAN}[~]{msg + Fore.RESET}")
+    def info(self, msg: str) -> None:
+        print(f"{Back.RESET + Style.RESET_ALL + Fore.CYAN}[~]{msg + Fore.RESET}")
     
-    def warning(msg: str) -> None:
-        print(f"\033[1m{Back.YELLOW}[!] {msg + Fore.RESET}")
+    def warning(self, msg: str) -> None:
+        print(f"\033[1m{Back.RESET + Style.RESET_ALL + Fore.YELLOW}[!] {msg + Fore.RESET}")
 LOGGER = Logging()
 
 class PlatformSupport(Enum):
@@ -73,18 +73,22 @@ class Menu():
             self.selection = None
 
         # remove menu-options
-        print(Cursor.DOWN(self.__cursor_pos), end="")
-        for i in range(0, len(self.options) - 2):
-            print(f"\033[2K\033[G{Cursor.UP()}", end="")
-        self.__clear_line()
+        if self.__cursor_pos > 0:
+            print(Cursor.DOWN(self.__cursor_pos), end="")
+        print(self.__cursor_pos, "")
+        for i in range(0, len(self.options) + 1):
+           print(f"\033[2K\033[G{Cursor.UP()}", end="")
 
         # print took option
-        print(f"{Cursor.UP(3) + Cursor.FORWARD(len(self.prompt) + 2) + self.selected_prefix + self.selection}")
+        print(f"{Cursor.UP() + Cursor.FORWARD(len(self.prompt) + 2) + self.selected_prefix + (self.selection if self.selection != None else 'None')}")
 
-        # show cursor
+        # show cursor and reset colors
         print("\033[?25h", end="")
         print(Fore.RESET + Style.RESET_ALL + Back.RESET, end="")
-        options[self.selection]()
+
+        # if selected run selected function
+        if self.selection != None:
+            options[self.selection]()
         
     def __clear_line(self) -> None:
         print("\033[2K\033[G", end="")
@@ -153,22 +157,6 @@ class Configuration():
         if not os.path.exists(DATA + "/" + self.id):
             raise FileNotFoundError("Config-data missing!")
 
-def main():
-    print(type(main))
-    init()
-
-    print(LOGO, end = " ")
-    print(GRAY + "everything " + Style.RESET_ALL + Fore.BLACK + Back.YELLOW + "v" + VERSION + Fore.RESET + Back.RESET, end="\n\n")
-
-    menu = Menu(prompt="[?] Take your action", options=
-        {
-            "List configs": lambda: print("Hello"),
-            "Create empty config":  lambda: print("Hello"),
-            "Update local configs": lambda: print("Hello")
-        }, hover_format=lambda option: Fore.CYAN + f"{' ' * 4}  > {option}" + Fore.RESET, option_prefix=Fore.YELLOW, prompt_prefix=Fore.YELLOW, selected_prefix=Fore.CYAN)
-    
-    print(menu.selection)
-
 def cache_configs() -> None:
     for f in os.listdir(INFO):
         try:
@@ -187,7 +175,22 @@ def list_configs() -> None:
     if chached_configs == None:
         cache_configs()
     print(f"{Fore.BLACK + Back.YELLOW}{len(cache_configs)} configs where cached!{Fore.RESET + Back.RESET}")
+
+def main():
+    LOGGER.warning("Hello")
+    init()
+
+    print(LOGO, end = " ")
+    print(GRAY + Style.RESET_ALL + "everything " + Style.RESET_ALL + Fore.BLACK + Back.YELLOW + "v" + VERSION + Fore.RESET + Back.RESET, end="\n\n")
+
+    menu = Menu(prompt="[?] Take your action", options=
+        {
+            "List configs": lambda: print("Hello"),
+            "Create empty config":  lambda: print("Hello"),
+            "Update local configs": lambda: print("Hello")
+        }, hover_format=lambda option: Fore.CYAN + f"{' ' * 4}  > {option}" + Fore.RESET, option_prefix=Fore.YELLOW, prompt_prefix=Fore.YELLOW, selected_prefix=Fore.CYAN)
     
+    #print(menu.selection)
 
 if __name__ == '__main__':
     main()
