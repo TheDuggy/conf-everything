@@ -1,6 +1,7 @@
 from sshkeyboard import listen_keyboard
-from colorama import Cursor, Fore, Style
-from colorama import Back
+from re import search, match
+from json import dump, load
+from colorama import Cursor, Fore, Style, Back
 from colorama.initialise import init
 from enum import Enum
 from types import FunctionType
@@ -23,7 +24,18 @@ Y0,               """ + GRAY + """_|   """ + Fore.YELLOW + "\____/" + GRAY + """
   `"Y0000Y"'     """ + GRAY + """|___| |   | |___|""" + Fore.YELLOW + """   00      `000  00
                        """ + GRAY + """|___|        """ + Fore.RESET + Style.RESET_ALL
 VERSION = "1.0"
+chached_configs = []
 
+class Logging():
+    def fatal(msg: str) -> None:
+        print(f"{Fore.RED}[-] {msg + Fore.RESET}")
+
+    def info(msg: str) -> None:
+        print(f"{Fore.CYAN}[~]{msg + Fore.RESET}")
+    
+    def warning(msg: str) -> None:
+        print(f"\033[1m{Back.YELLOW}[!] {msg + Fore.RESET}")
+LOGGER = Logging()
 
 class PlatformSupport(Enum):
     WINDOWS = 1
@@ -120,24 +132,26 @@ class Menu():
         
 
 class Configuration():
-    def __init__(self, id: str, platform: PlatformSupport, conf_version: int) -> None:
-        self.id = id
-        self.platform = platform
-        self.conf_version = conf_version
+    def __init__(self, json_str: str) -> None:
+        json_data = load(json_str)
+        self.id = str(json_data["id"])
+        self.platform = str(json_data["platform"])
+        self.conf_version = str(json_data["conf_version"])
+        self.display_name = str(json_data["display_name"])
         self.__validate_folder_structure()
 
 
     def __validate_folder_structure(self) -> None:
         if self.platform == PlatformSupport.WINDOWS or self.platform == PlatformSupport.BOTH:
             if not os.path.exists(INFO + "/" + self.id + "/win.bat"):
-                raise Exception("Windos install script missing!")
+                raise FileNotFoundError("Windows install script missing!")
 
         if self.platform == PlatformSupport.LINUX or self.platform == PlatformSupport.LINUX:
             if not os.path.exists(INFO + "/" + self.id + "/linux.sh"):
-                raise Exception("Linux install script missing!")
+                raise FileNotFoundError("Linux install script missing!")
 
         if not os.path.exists(DATA + "/" + self.id):
-            raise Exception("Data entry missing!")
+            raise FileNotFoundError("Config-data missing!")
 
 def main():
     print(type(main))
@@ -154,6 +168,26 @@ def main():
         }, hover_format=lambda option: Fore.CYAN + f"{' ' * 4}  > {option}" + Fore.RESET, option_prefix=Fore.YELLOW, prompt_prefix=Fore.YELLOW, selected_prefix=Fore.CYAN)
     
     print(menu.selection)
+
+def cache_configs() -> None:
+    for f in os.listdir(INFO):
+        try:
+            conf_id = f
+            match = search(r"(.+)\.(.+)$", f)
+            if match:
+                conf_id = match.group()
+            
+            with open(f, "r") as json_file:
+                list.append(cache_configs, Configuration(json_file.read().splitlines()))
+        except Exception as e:
+            LOGGER.warning(f"Failed to cache config {f}: ({e.__class__.__name__}) {str(e)}")
+
+def list_configs() -> None:
+    print(f"{Fore.BLACK + Back.YELLOW}Caching confs...{Fore.RESET + Back.RESET}", end="")
+    if chached_configs == None:
+        cache_configs()
+    print(f"{Fore.BLACK + Back.YELLOW}{len(cache_configs)} configs where cached!{Fore.RESET + Back.RESET}")
+    
 
 if __name__ == '__main__':
     main()
