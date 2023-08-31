@@ -26,7 +26,8 @@ Y0,               """ + GRAY + Style.RESET_ALL + """_|   """ + Fore.YELLOW + "\_
   `"Y0000Y"'     """ + GRAY + Style.RESET_ALL + """|___| |   | |___|""" + Fore.YELLOW + """   00      `000  00
                        """ + GRAY + Style.RESET_ALL + """|___|        """ + Fore.RESET + Style.RESET_ALL
 VERSION = "1.0"
-chached_configs = []
+cached_configs = {}
+confs_empty = True
 
 class Logging():
     def fatal(self, msg: str) -> None:
@@ -262,14 +263,26 @@ def cache_configs() -> None:
             match = search(r"(.+)\.(.+)$", f)
             if match:
                 conf_id = match.group()
-            
+            else:
+                continue
+
             with open(f, "r") as json_file:
-                list.append(cache_configs, Configuration(json_file.read().splitlines()))
+                cached_configs.update(conf_id, Configuration(json_file.read().splitlines()))
+            if confs_empty:
+                confs_empty = False
         except Exception as e:
             LOGGER.warning(f"Failed to cache config {f}: ({e.__class__.__name__}) {str(e)}")
 
 def list_configs() -> None:
-    pass
+    if len(cached_configs) == 0:
+        LOGGER.info(Back.YELLOW + "Caching configs ...")
+        cache_configs()
+        LOGGER.info(Back.YELLOW + "Finished!")
+        if confs_empty:
+            LOGGER.info("There are no confs!")
+            return
+
+    
 
 def main():
     LOGGER.warning("Hello")
@@ -284,8 +297,6 @@ def main():
             "Create empty config":  lambda: print("Hello"),
             "Update local configs": lambda: print("Hello")
         }, hover_format=lambda option: Fore.CYAN + f"{' ' * 4}  > {option}" + Fore.RESET, option_prefix=Fore.YELLOW, prompt_prefix=Fore.YELLOW, selected_prefix=Fore.CYAN)
-    
-    #print(menu.selection)
 
 if __name__ == '__main__':
     main()
