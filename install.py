@@ -1,4 +1,6 @@
 from sshkeyboard import listen_keyboard
+from time import sleep
+from math import floor, ceil
 from re import search, match
 from json import dump, load
 from colorama import Cursor, Fore, Style, Back
@@ -133,6 +135,102 @@ class Menu():
         # print the hover-effect
         self.__clear_line()
         print(self.hover_format(self.selection), end="\r")
+
+class Scrollable():
+    def __init__(self, w_h: tuple, entries: list) -> None:
+        self.w = w_h[0]
+        self.h = w_h[1]
+        self.entries = entries
+        if not self.h >= 3:
+            raise ValueError("<h> must be at least 3 for scroll-bar!")
+        self.__last_shown = self.h - 1
+        self.__first_shown = 0
+        self.__hover_pos = None
+        self.__term_size_h = os.get_terminal_size()[1]
+        print("\033[?25l", end="")
+
+        print(f"{'-' * floor((self.w + 3) / 2)}ƒ{'-' * floor((self.w + 3) / 2)}")
+        for i in range(0, self.h if self.h <= len(self.entries) else len(self.entries)):
+            print(self.__validate_entryname(self.entries[i]))
+        print('-' * (self.w + 3))
+        print(Cursor.UP(self.h + 1), end="")
+        try:
+            listen_keyboard(on_press=self.__on_press, until="enter", delay_other_chars=0.01, delay_second_char=0.01) 
+        except KeyboardInterrupt:
+            pass
+        
+        print(f"{Cursor.UP()}\033[2K\033[G{Cursor.UP()}")
+        print("\033[?25h", end="")
+        sleep(10)
+
+            
+    def __validate_entryname(self, entryname: str) -> str:
+        if len(entryname) > self.w:
+            return entryname[:(self.w - 3)] + "..."
+        return entryname
+    
+    def __on_press(self, key):
+        if key in ["down", "tab"]:
+            self.__select(1)
+        elif key == "up":
+            self.__select(-1)
+
+    def __select(self, move: int):
+
+        if self.__term_size_h != os.get_terminal_size()[1]:
+            dif = os.get_terminal_size()[1] - self.__term_size_h
+            if dif < 0:
+                print(Cursor.UP(), end="")
+            self.__term_size_h = os.get_terminal_size()[1]
+            
+
+        if self.__hover_pos == None:
+            self.__hover_pos = 0
+        else:
+            if self.__hover_pos == self.__last_shown and move == 1:
+                if self.__hover_pos < len(self.entries) - 1:
+                    self.__last_shown += 1
+                    self.__first_shown += 1
+                else:
+                    self.__last_shown = self.h - 1
+                    self.__first_shown = 0
+            elif self.__hover_pos == self.__first_shown and move == -1:
+                if self.__hover_pos > 0:
+                    self.__last_shown -= 1
+                    self.__first_shown -= 1
+                else:
+                    self.__last_shown = len(self.entries) - 1
+                    self.__first_shown = len(self.entries) - self.h
+            self.__hover_pos = (self.__hover_pos + move) % len(self.entries)
+        
+        
+    
+
+        for i in range(self.__first_shown, self.__last_shown + 1):
+            print("\033[2K\033[G", end="")
+            if self.__hover_pos == i:
+                print(Back.YELLOW + Fore.BLACK, end="")
+            else:
+                print(Fore.YELLOW, end="")
+            print(f"{self.__validate_entryname(self.entries[i]) if i < len(self.entries) else ''}", end="")
+
+            draw_bar = floor(self.h * (self.__hover_pos / len(self.entries))) == i - self.__first_shown
+
+            if draw_bar:
+                print(f"{Back.RESET + Fore.RESET + ' ' * ((self.w + 3) - len(self.__validate_entryname(self.entries[i]))) + Back.YELLOW + Fore.BLACK}||{Back.RESET + Fore.YELLOW} {self.__hover_pos + 1}/{len(self.entries)}", end="")
+
+            if len(self.entries[i]) > self.w and self.__hover_pos == i:
+                print("\x1b[3m" + Back.RESET + GRAY + f"  ({self.entries[i]})" + Fore.RESET + "\x1b[0m")
+            else:
+                print() 
+            print(Back.RESET + Fore.RESET, end="")
+        print(Cursor.UP(self.h), end="")
+
+    
+        
+        
+        
+        
         
 
 class Configuration():
@@ -171,10 +269,7 @@ def cache_configs() -> None:
             LOGGER.warning(f"Failed to cache config {f}: ({e.__class__.__name__}) {str(e)}")
 
 def list_configs() -> None:
-    print(f"{Fore.BLACK + Back.YELLOW}Caching confs...{Fore.RESET + Back.RESET}", end="")
-    if chached_configs == None:
-        cache_configs()
-    print(f"{Fore.BLACK + Back.YELLOW}{len(cache_configs)} configs where cached!{Fore.RESET + Back.RESET}")
+    pass
 
 def main():
     LOGGER.warning("Hello")
@@ -185,7 +280,7 @@ def main():
 
     menu = Menu(prompt="[?] Take your action", options=
         {
-            "List configs": lambda: print("Hello"),
+            "List configs": list_configs,
             "Create empty config":  lambda: print("Hello"),
             "Update local configs": lambda: print("Hello")
         }, hover_format=lambda option: Fore.CYAN + f"{' ' * 4}  > {option}" + Fore.RESET, option_prefix=Fore.YELLOW, prompt_prefix=Fore.YELLOW, selected_prefix=Fore.CYAN)
