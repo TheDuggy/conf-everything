@@ -1,3 +1,4 @@
+from threading import Thread, Lock, Event
 from sshkeyboard import listen_keyboard
 from time import sleep
 from math import floor, ceil
@@ -42,8 +43,16 @@ LOGGER = Logging()
 
 class PlatformSupport(Enum):
     WINDOWS = 1
-    LINUX = 2
-    BOTH = 3
+    LINUX   = 2
+    BOTH    = 3
+
+class AnsiEx():
+    HIDE_CURSOR = "\033[?25l"
+    SHOW_CURSOR = "\033[?25h"
+    CLEAR_LINE  = "\033[2K\033[G"
+    ITALIC      = "\x1b[3m"
+
+
 
 class Menu():
     def __init__(self, prompt: str, options: dict, hover_format: FunctionType, option_prefix: str = Fore.RESET, prompt_prefix: str = Fore.RESET, selected_prefix: str = Fore.RESET) -> None:
@@ -57,8 +66,7 @@ class Menu():
         self.prompt_prefix = prompt_prefix
         self.hover_format = hover_format
 
-        # hide cursor
-        print("\033[?25l", end="")
+        print(AnsiEx.HIDE_CURSOR, end="")
 
         print(f"{prompt_prefix + prompt}: ", end="\n\n")
 
@@ -80,21 +88,18 @@ class Menu():
             print(Cursor.DOWN(self.__cursor_pos), end="")
         print(self.__cursor_pos, "")
         for i in range(0, len(self.options) + 1):
-           print(f"\033[2K\033[G{Cursor.UP()}", end="")
+           print(f"{AnsiEx.CLEAR_LINE + Cursor.UP()}", end="")
 
         # print took option
         print(f"{Cursor.UP() + Cursor.FORWARD(len(self.prompt) + 2) + self.selected_prefix + (self.selection if self.selection != None else 'None')}")
 
         # show cursor and reset colors
-        print("\033[?25h", end="")
+        print(AnsiEx.SHOW_CURSOR, end="")
         print(Fore.RESET + Style.RESET_ALL + Back.RESET, end="")
 
         # if selected run selected function
         if self.selection != None:
             options[self.selection]()
-        
-    def __clear_line(self) -> None:
-        print("\033[2K\033[G", end="")
 
     def __on_press(self, key) -> None:
         if key in ["up", "down", "tab"]:
@@ -108,7 +113,7 @@ class Menu():
         if self.__first_pressed:
 
             # remove hover-effect from previous selection
-            self.__clear_line()
+            print(AnsiEx.CLEAR_LINE, end="")
             print(Fore.RESET + f"{' ' * 4}{self.option_prefix + self.selection}", end="\r")
 
             self.selection = self.options[((self.options.index(self.selection) + move) + len(self.options)) % len(self.options)]
@@ -134,7 +139,7 @@ class Menu():
             self.__first_pressed = True
 
         # print the hover-effect
-        self.__clear_line()
+        print(AnsiEx.CLEAR_LINE, end="")
         print(self.hover_format(self.selection), end="\r")
 
 class Scrollable():
@@ -148,7 +153,7 @@ class Scrollable():
         self.__first_shown = 0
         self.__hover_pos = None
         self.__term_size_h = os.get_terminal_size()[1]
-        print("\033[?25l", end="")
+        print(AnsiEx.HIDE_CURSOR, end="")
 
         print(f"{'-' * floor((self.w + 3) / 2)}ƒ{'-' * floor((self.w + 3) / 2)}")
         for i in range(0, self.h if self.h <= len(self.entries) else len(self.entries)):
@@ -160,8 +165,8 @@ class Scrollable():
         except KeyboardInterrupt:
             pass
         
-        print(f"{Cursor.UP()}\033[2K\033[G{Cursor.UP()}")
-        print("\033[?25h", end="")
+        print(Cursor.UP() + AnsiEx.CLEAR_LINE + Cursor.UP())
+        print(AnsiEx.SHOW_CURSOR, end="")
         sleep(10)
 
             
@@ -221,16 +226,32 @@ class Scrollable():
                 print(f"{Back.RESET + Fore.RESET + ' ' * ((self.w + 3) - len(self.__validate_entryname(self.entries[i]))) + Back.YELLOW + Fore.BLACK}||{Back.RESET + Fore.YELLOW} {self.__hover_pos + 1}/{len(self.entries)}", end="")
 
             if len(self.entries[i]) > self.w and self.__hover_pos == i:
-                print("\x1b[3m" + Back.RESET + GRAY + f"  ({self.entries[i]})" + Fore.RESET + "\x1b[0m")
+                print(AnsiEx.ITALIC + Back.RESET + GRAY + f"  ({self.entries[i]})" + Fore.RESET + "\x1b[0m")
             else:
                 print() 
             print(Back.RESET + Fore.RESET, end="")
         print(Cursor.UP(self.h), end="")
 
-    
+class ProgBar():
+    def __init__(self, entries: list, show_current: bool = False, size: int = 10) -> None:
+        self.entries = entries
+        self.show_current = show_current
+        self.progress = 0
+        self.size = size
+        print(f"[{' ' * self.size}]", end=Cursor.BACK(self.size + 2), flush=True)
+
+    def update(self):
+        self.progress += 1
+        perc = float(self.progress) / len(self.entries)
+        bar_len = floor(self.size * perc)
         
-        
-        
+        percentage = Fore.YELLOW + f"{round(perc * 100, 2)}% "
+        bar = f"[{Back.YELLOW + Fore.BLACK + '=' * bar_len + Fore.RESET + Back.RESET + ' ' * (self.size - bar_len)}] "
+        current = f"{AnsiEx.ITALIC + GRAY + self.entries[self.progress - 1]}...{Style.RESET_ALL}"
+        print(bar + percentage + AnsiEx.ITALIC + GRAY + current + Style.RESET_ALL, end=Cursor.BACK(len(bar) + len(current) + len(percentage)), flush=True)
+
+    def stop(self):
+        print(Cursor.FORWARD(len(f"[{self.size * '='}] 100.0%")) + " " * (len(self.entries[self.progress - 1]) + 4))
         
         
 
@@ -282,10 +303,41 @@ def list_configs() -> None:
             LOGGER.info("There are no confs!")
             return
 
-    
+def prog_test() -> None:
+    entries = [
+        "Step1",
+        "Step2",
+        "Step3",
+        "Step4",
+        "Step5",
+        "Step6",
+        "Step7",
+        "Step8",
+        "Step9",
+        "Step10",
+        "Step11",
+        "Step12",
+        "Step13",
+        "Step14",
+        "Step15",
+        "Step16",
+        "Step17",
+        "Step18",
+        "Step19",
+        "Step20",
+        "Step21"
+    ]
+
+    bar = ProgBar(entries, True)
+
+    for i in entries:
+        bar.update()
+        sleep(0.5)
+    bar.stop()
+
+
 
 def main():
-    LOGGER.warning("Hello")
     init()
 
     print(LOGO, end = " ")
@@ -295,7 +347,8 @@ def main():
         {
             "List configs": list_configs,
             "Create empty config":  lambda: print("Hello"),
-            "Update local configs": lambda: print("Hello")
+            "Update local configs": lambda: print("Hello"),
+            "Prog-test": prog_test
         }, hover_format=lambda option: Fore.CYAN + f"{' ' * 4}  > {option}" + Fore.RESET, option_prefix=Fore.YELLOW, prompt_prefix=Fore.YELLOW, selected_prefix=Fore.CYAN)
 
 if __name__ == '__main__':
